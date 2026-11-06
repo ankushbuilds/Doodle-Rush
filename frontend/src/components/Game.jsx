@@ -10,7 +10,17 @@ function formatTime(seconds) {
   return `${minutes}:${remainingSeconds}`;
 }
 
-export default function Game({ room, messages, onAction, onError }) {
+export default function Game({
+  room,
+  messages,
+  onAction,
+  onError,
+  soundEnabled,
+  volume,
+  onSoundEnabledChange,
+  onVolumeChange,
+  onPlaySound,
+}) {
   // -------------------- STATE --------------------
 
   const [guess, setGuess] = useState("");
@@ -41,6 +51,13 @@ export default function Game({ room, messages, onAction, onError }) {
   // -------------------- TIMER --------------------
 
   useEffect(() => {
+    let previousRemaining = room.endsAt
+      ? Math.max(
+          0,
+          Math.ceil((room.endsAt - Date.now()) / 1000)
+        )
+      : 0;
+
     const updateTimer = () => {
       const remaining = room.endsAt
         ? Math.max(
@@ -49,6 +66,16 @@ export default function Game({ room, messages, onAction, onError }) {
           )
         : 0;
 
+      if (
+        room.phase === "drawing" &&
+        remaining > 0 &&
+        remaining < previousRemaining &&
+        remaining <= 5
+      ) {
+        onPlaySound("countdown");
+      }
+
+      previousRemaining = remaining;
       setSeconds(remaining);
     };
 
@@ -57,7 +84,7 @@ export default function Game({ room, messages, onAction, onError }) {
     const timer = setInterval(updateTimer, 250);
 
     return () => clearInterval(timer);
-  }, [room.endsAt]);
+  }, [room.endsAt, room.phase, onPlaySound]);
 
   // -------------------- AUTO-SCROLL CHAT --------------------
 
@@ -338,6 +365,33 @@ export default function Game({ room, messages, onAction, onError }) {
           <div className="chat-heading">
             <h2>💬 Guesses & chat</h2>
             <span>LIVE</span>
+          </div>
+
+          <div className="sound-controls">
+            <button
+              className="sound-toggle"
+              type="button"
+              aria-pressed={soundEnabled}
+              onClick={() => onSoundEnabledChange(!soundEnabled)}
+            >
+              Sound {soundEnabled ? "ON" : "OFF"}
+            </button>
+
+            <label>
+              Volume
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={volume}
+                aria-label="Sound volume"
+                disabled={!soundEnabled}
+                onChange={(event) =>
+                  onVolumeChange(Number(event.target.value))
+                }
+              />
+            </label>
           </div>
 
           {/* Chat Messages */}

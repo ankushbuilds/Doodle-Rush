@@ -10,6 +10,11 @@ import { io } from "socket.io-client";
 
 import Lobby from "./components/Lobby.jsx";
 import Game from "./components/Game.jsx";
+import {
+  playGameSound,
+  unlockGameAudio,
+  vibrate,
+} from "./audioFeedback.js";
 
 // --------------------------------------------------
 // CONFIGURATION
@@ -35,6 +40,24 @@ function readSession() {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
   } catch {
     return null;
+  }
+}
+
+function readSoundSettings() {
+  try {
+    const saved = JSON.parse(
+      localStorage.getItem("doodlerush-sound-settings") || "null"
+    );
+
+    return {
+      enabled: saved?.enabled !== false,
+      volume:
+        Number.isFinite(saved?.volume)
+          ? Math.max(0, Math.min(1, saved.volume))
+          : 0.35,
+    };
+  } catch {
+    return { enabled: true, volume: 0.35 };
   }
 }
 
@@ -77,10 +100,13 @@ async function copyToClipboard(text) {
 export default function App() {
   // Socket reference
   const socketRef = useRef(null);
+  const roomRef = useRef(null);
+  const soundSettingsRef = useRef(null);
 
   // Application state
   const [connected, setConnected] = useState(false);
   const [room, setRoom] = useState(null);
+  const [soundSettings, setSoundSettings] = useState(readSoundSettings);
   const [session, setSession] = useState(readSession);
 
   const [username, setUsername] = useState("");
@@ -89,6 +115,20 @@ export default function App() {
   const [error, setError] = useState("");
   const [messages, setMessages] = useState([]);
   const [notice, setNotice] = useState("");
+
+  soundSettingsRef.current = soundSettings;
+
+  const playSound = useCallback((name) => {
+    const settings = soundSettingsRef.current;
+    if (settings?.enabled) {
+      playGameSound(name, settings.volume);
+    }
+  }, []);
+
+  const updateSoundEnabled = useCallback((enabled) => {
+    if (enabled) unlockGameAudio();
+    setSoundSettings((current) => ({ ...current, enabled }));
+  }, []);
 
   // --------------------------------------------------
   // SOCKET CONNECTION AND EVENT LISTENERS
@@ -126,6 +166,7 @@ export default function App() {
             localStorage.removeItem(STORAGE_KEY);
 
             setSession(null);
+            roomRef.current = null;
             setRoom(null);
           }
         });
@@ -148,6 +189,7 @@ export default function App() {
 
     // Room state update
     const handleRoomState = (newRoom) => {
+      roomRef.current = newRoom;
       setRoom(newRoom);
     };
 
@@ -189,16 +231,40 @@ export default function App() {
 
     // Chat events
     const handleChatMessage = (message) => {
+      if (
+        message.kind === "chat" &&
+        message.playerId !== roomRef.current?.playerId
+      ) {
+        playSound("chat");
+      }
+
       setMessages((items) => [...items.slice(-99), message]);
     };
 
     // Game events
     const handleCorrectGuess = ({ username: name, points }) => {
+      playSound("correct");
+      vibrate(100);
       setNotice(`${name} guessed it! +${points} points`);
     };
 
     const handleRoundEnded = ({ word }) => {
       setNotice(`The word was ${word}`);
+    };
+
+    const handleRoundStarted = () => {
+      playSound("round");
+      vibrate(40);
+    };
+
+    const handlePlayerJoined = () => {
+      playSound("joined");
+      vibrate(30);
+    };
+
+    const handleGameOver = () => {
+      playSound("gameOver");
+      vibrate(250);
     };
 
     // Server errors
@@ -220,7 +286,10 @@ export default function App() {
     socket.on("chat:message", handleChatMessage);
 
     socket.on("game:correct-guess", handleCorrectGuess);
+    socket.on("round:started", handleRoundStarted);
     socket.on("round:ended", handleRoundEnded);
+    socket.on("player:joined", handlePlayerJoined);
+    socket.on("game:over", handleGameOver);
 
     socket.on("app:error", handleAppError);
 
@@ -251,7 +320,10 @@ export default function App() {
       socket.off("chat:message", handleChatMessage);
 
       socket.off("game:correct-guess", handleCorrectGuess);
+      socket.off("round:started", handleRoundStarted);
       socket.off("round:ended", handleRoundEnded);
+      socket.off("player:joined", handlePlayerJoined);
+      socket.off("game:over", handleGameOver);
 
       socket.off("app:error", handleAppError);
 
@@ -262,6 +334,17 @@ export default function App() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "doodlerush-sound-settings",
+        JSON.stringify(soundSettings)
+      );
+    } catch (error) {
+      console.warn("Could not save sound settings:", error);
+    }
+  }, [soundSettings]);
 
   // --------------------------------------------------
   // NOTICE AUTO DISMISS
@@ -335,6 +418,8 @@ export default function App() {
   const createRoom = async () => {
     if (!username.trim()) return;
 
+    unlockGameAudio();
+
     const result = await perform("room:create", {
       username: username.trim(),
     });
@@ -348,6 +433,8 @@ export default function App() {
     if (!username.trim() || roomCode.trim().length !== 6) {
       return;
     }
+
+    unlockGameAudio();
 
     const result = await perform("room:join", {
       username: username.trim(),
@@ -365,6 +452,7 @@ export default function App() {
     localStorage.removeItem(STORAGE_KEY);
 
     setSession(null);
+    roomRef.current = null;
     setRoom(null);
     setMessages([]);
     setError("");
@@ -571,6 +659,12 @@ export default function App() {
           room={room}
           onAction={perform}
           onError={setError}
+          soundEnabled={soundSettings.enabled}
+          volume={soundSettings.volume}
+          onSoundEnabledChange={updateSoundEnabled}
+          onVolumeChange={(volume) =>
+            setSoundSettings((current) => ({ ...current, volume }))
+          }
         />
       ) : (
         <Game
@@ -578,6 +672,13 @@ export default function App() {
           messages={messages}
           onAction={perform}
           onError={setError}
+          soundEnabled={soundSettings.enabled}
+          volume={soundSettings.volume}
+          onSoundEnabledChange={updateSoundEnabled}
+          onVolumeChange={(volume) =>
+            setSoundSettings((current) => ({ ...current, volume }))
+          }
+          onPlaySound={playSound}
         />
       )}
     </main>

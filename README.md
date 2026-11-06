@@ -96,9 +96,15 @@ npm install
 
 Create your environment file using the example:
 
+<<<<<<< HEAD
 ```bash
 copy .env.example .env
 ```
+=======
+During a drawing turn, guessers see word blanks and receive a server-synchronized letter hint after 20 seconds, then every 15 seconds. The drawer sees the complete word. Sound effects can be enabled or muted and adjusted with the volume slider in the lobby or game; the preference is saved in that browser. Supported mobile devices also receive haptic feedback for key game events.
+
+## Server endpoints and events
+>>>>>>> 4bdf539 (initital commit)
 
 Configure the environment variables in `.env`.
 

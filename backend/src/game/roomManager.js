@@ -13,6 +13,8 @@ const MIN_PLAYERS = 2;
 
 const RECONNECT_GRACE_MS = 45_000;
 const ROUND_PAUSE_MS = 5_000;
+const FIRST_HINT_DELAY_MS = 20_000;
+const NEXT_HINT_DELAY_MS = 15_000;
 
 // ============================================================
 // HELPER FUNCTIONS
@@ -61,26 +63,13 @@ function publicPlayer(player) {
   };
 }
 
-// Generate partially revealed word hint
-function hintPattern(word, guessedCount) {
+// Build the stable hint shown to guessers.
+function hintPattern(word, revealedIndices) {
   const chars = [...word];
-
-  const reveal = Math.min(
-    chars.length - 1,
-    guessedCount
-  );
-
-  const revealed = new Set();
-
-  while (revealed.size < reveal) {
-    revealed.add(
-      Math.floor(Math.random() * chars.length)
-    );
-  }
 
   return chars
     .map((char, index) =>
-      char === " " || revealed.has(index)
+      char === " " || revealedIndices.has(index)
         ? char
         : "_"
     )
@@ -143,8 +132,10 @@ export function attachRoomHandlers(io, saveHistory) {
           : 0,
 
         hint:
-          room.word && room.drawerId !== player.id
-            ? hintPattern(room.word, room.guessed.size)
+          room.phase === "drawing" &&
+          room.word &&
+          room.drawerId !== player.id
+            ? hintPattern(room.word, room.hintLetters)
             : "",
 
         word:
@@ -167,6 +158,55 @@ export function attachRoomHandlers(io, saveHistory) {
 
       io.to(player.socketId).emit("room:state", state);
     }
+  }
+
+  function resetHints(room) {
+    clearTimer(room, "hintTimer");
+    room.hintLetters = new Set();
+    room.hintVersion += 1;
+  }
+
+  function scheduleHint(room, delay = FIRST_HINT_DELAY_MS) {
+    clearTimer(room, "hintTimer");
+
+    if (room.phase !== "drawing" || !room.word) return;
+
+    const hintVersion = room.hintVersion;
+    const word = room.word;
+
+    room.hintTimer = setTimeout(() => {
+      if (
+        hintVersion !== room.hintVersion ||
+        room.phase !== "drawing" ||
+        room.word !== word
+      ) {
+        return;
+      }
+
+      room.hintTimer = null;
+
+      const chars = [...word];
+      const unrevealed = chars
+        .map((char, index) => ({ char, index }))
+        .filter(
+          ({ char, index }) =>
+            char !== " " && !room.hintLetters.has(index)
+        );
+
+      if (!unrevealed.length) return;
+
+      const { char } =
+        unrevealed[Math.floor(Math.random() * unrevealed.length)];
+
+      chars.forEach((current, index) => {
+        if (current === char) {
+          room.hintLetters.add(index);
+        }
+      });
+
+      emitState(room);
+      scheduleHint(room, NEXT_HINT_DELAY_MS);
+    }, delay);
   }
 
   // Broadcast an event to everyone in the room
@@ -264,6 +304,7 @@ export function attachRoomHandlers(io, saveHistory) {
     room.turnIndex += 1;
 
     // Reset turn data
+    resetHints(room);
     room.phase = "choosing";
     room.word = "";
     room.wordChoices = chooseWords();
@@ -296,6 +337,8 @@ export function attachRoomHandlers(io, saveHistory) {
     room.word = word;
     room.wordChoices = [];
     room.phase = "drawing";
+    resetHints(room);
+    scheduleHint(room);
 
     room.endsAt =
       Date.now() + room.settings.roundDuration * 1000;
@@ -305,6 +348,11 @@ export function attachRoomHandlers(io, saveHistory) {
       room.settings.roundDuration * 1000
     );
 
+    broadcast(room, "round:started", {
+      round: room.round,
+      drawerId: room.drawerId,
+    });
+
     emitState(room);
   }
 
@@ -313,6 +361,7 @@ export function attachRoomHandlers(io, saveHistory) {
     clearTimer(room, "choiceTimer");
     clearTimer(room, "turnTimer");
     clearTimer(room, "pauseTimer");
+    resetHints(room);
 
     room.phase = "roundEnd";
     room.endsAt = null;
@@ -336,6 +385,7 @@ export function attachRoomHandlers(io, saveHistory) {
     clearTimer(room, "choiceTimer");
     clearTimer(room, "turnTimer");
     clearTimer(room, "pauseTimer");
+    resetHints(room);
 
     room.phase = "gameOver";
     room.endsAt = null;
@@ -381,6 +431,7 @@ export function attachRoomHandlers(io, saveHistory) {
   // Start a new game
   function startGame(room) {
     clearTimer(room, "choiceTimer");
+    resetHints(room);
 
     room.phase = "choosing";
     room.round = 1;
@@ -400,6 +451,7 @@ export function attachRoomHandlers(io, saveHistory) {
     clearTimer(room, "turnTimer");
     clearTimer(room, "choiceTimer");
     clearTimer(room, "pauseTimer");
+    resetHints(room);
 
     room.phase = "lobby";
     room.round = 0;
@@ -441,6 +493,11 @@ export function attachRoomHandlers(io, saveHistory) {
     }
 
     room.players.delete(playerId);
+
+    resetHints(room);
+    if (room.phase === "drawing" && room.drawerId !== playerId) {
+      scheduleHint(room);
+    }
 
     // Transfer host ownership
     if (room.hostId === playerId) {
@@ -487,6 +544,7 @@ export function attachRoomHandlers(io, saveHistory) {
       clearTimer(room, "turnTimer");
       clearTimer(room, "choiceTimer");
       clearTimer(room, "pauseTimer");
+      resetHints(room);
       clearTimer(room, "emptyTimer");
 
       rooms.delete(room.code);
@@ -555,6 +613,8 @@ export function attachRoomHandlers(io, saveHistory) {
 
         word: "",
         wordChoices: [],
+        hintLetters: new Set(),
+        hintVersion: 0,
 
         strokes: [],
         guessed: new Set(),
@@ -662,6 +722,10 @@ export function attachRoomHandlers(io, saveHistory) {
 
       emitState(room);
 
+      socket.to(code).emit("player:joined", {
+        username: player.username,
+      });
+
       sendOk(callback, {
         code,
         playerId: player.id,
@@ -699,6 +763,10 @@ export function attachRoomHandlers(io, saveHistory) {
 
       clearTimeout(player.reconnectTimer);
 
+      const roomWasEmpty = ![...room.players.values()].some(
+        (member) => member.connected
+      );
+
       player.connected = true;
       player.socketId = socket.id;
 
@@ -712,6 +780,11 @@ export function attachRoomHandlers(io, saveHistory) {
         !room.players.get(room.hostId)?.connected
       ) {
         room.hostId = player.id;
+      }
+
+      if (roomWasEmpty && room.phase === "drawing") {
+        resetHints(room);
+        scheduleHint(room);
       }
 
       emitState(room);
@@ -1331,6 +1404,15 @@ export function attachRoomHandlers(io, saveHistory) {
       player.connected = false;
       player.socketId = null;
 
+      const hasConnectedPlayers = [...room.players.values()].some(
+        (candidate) => candidate.connected
+      );
+
+      resetHints(room);
+      if (hasConnectedPlayers && room.phase === "drawing") {
+        scheduleHint(room);
+      }
+
       // Transfer host ownership temporarily
       if (room.hostId === player.id) {
         room.hostId =
@@ -1356,10 +1438,6 @@ export function attachRoomHandlers(io, saveHistory) {
       }, RECONNECT_GRACE_MS);
 
       // Delete room if every player disconnects
-      const hasConnectedPlayers = [
-        ...room.players.values(),
-      ].some((candidate) => candidate.connected);
-
       if (!hasConnectedPlayers) {
         room.emptyTimer = setTimeout(() => {
           const stillEmpty = ![
@@ -1370,6 +1448,7 @@ export function attachRoomHandlers(io, saveHistory) {
             clearTimer(room, "turnTimer");
             clearTimer(room, "choiceTimer");
             clearTimer(room, "pauseTimer");
+            resetHints(room);
 
             rooms.delete(room.code);
           }

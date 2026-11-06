@@ -1,7 +1,15 @@
 
 import React from "react";
 
-export default function Lobby({ room, onAction, onError }) {
+export default function Lobby({
+  room,
+  onAction,
+  onError,
+  soundEnabled,
+  volume,
+  onSoundEnabledChange,
+  onVolumeChange,
+}) {
   const isHost = room.playerId === room.hostId;
 
   // Generate invite link using the current network URL
@@ -299,6 +307,33 @@ export default function Lobby({ room, onAction, onError }) {
             Take turns drawing a secret word while everyone
             races to guess it in the chat.
           </p>
+        </div>
+
+        <div className="sound-controls">
+          <button
+            className="sound-toggle"
+            type="button"
+            aria-pressed={soundEnabled}
+            onClick={() => onSoundEnabledChange(!soundEnabled)}
+          >
+            Sound {soundEnabled ? "ON" : "OFF"}
+          </button>
+
+          <label>
+            Volume
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={volume}
+              aria-label="Sound volume"
+              disabled={!soundEnabled}
+              onChange={(event) =>
+                onVolumeChange(Number(event.target.value))
+              }
+            />
+          </label>
         </div>
 
         {/* Start Game */}
