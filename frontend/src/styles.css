@@ -1,0 +1,1952 @@
+
+/* =========================================================
+   DOODLE RUSH
+   Main Stylesheet
+   Theme: Purple & White
+   Fonts: DM Sans + Outfit
+========================================================= */
+
+
+/* =========================================================
+   01. GOOGLE FONTS & ROOT VARIABLES
+========================================================= */
+
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap");
+
+:root {
+  font-family: "DM Sans", sans-serif;
+  color: #24213b;
+  background: #f7f5ff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+
+  --purple: #7257d9;
+  --purple-dark: #6045c6;
+  --ink: #24213b;
+  --muted: #8b899e;
+  --orange: #ff9f43;
+  --line: #eeedf4;
+
+  --card-shadow: 0 16px 48px rgba(48, 36, 102, 0.08);
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 13px;
+  --radius-xl: 15px;
+  --radius-2xl: 22px;
+}
+
+
+/* =========================================================
+   02. GLOBAL RESET & BASE STYLES
+========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+img,
+canvas {
+  max-width: 100%;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+
+/* =========================================================
+   03. ANIMATIONS
+========================================================= */
+
+@keyframes bob {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -9px;
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    translate: 0 -8px;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+
+/* =========================================================
+   04. COMMON COMPONENTS
+========================================================= */
+
+/* Brand */
+
+.brand {
+  color: var(--ink);
+  text-decoration: none;
+  font: 800 24px "Outfit", sans-serif;
+  letter-spacing: -0.8px;
+}
+
+.brand::first-letter {
+  color: var(--purple);
+}
+
+/* Buttons */
+
+.button {
+  border: 0;
+  border-radius: var(--radius-md);
+  font-weight: 800;
+  transition:
+    transform 0.18s,
+    background 0.18s,
+    box-shadow 0.18s;
+}
+
+.button:not(:disabled):hover {
+  transform: translateY(-2px);
+}
+
+.primary {
+  color: #fff;
+  background: var(--purple);
+  box-shadow: 0 7px 16px #7257d932;
+}
+
+.primary:not(:disabled):hover {
+  background: var(--purple-dark);
+  box-shadow: 0 9px 20px #7257d947;
+}
+
+.secondary {
+  color: var(--purple);
+  background: #f2efff;
+}
+
+.secondary:not(:disabled):hover {
+  background: #e9e3ff;
+}
+
+.full {
+  width: 100%;
+}
+
+/* Labels */
+
+.eyebrow {
+  color: var(--purple);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.7px;
+}
+
+.title-dot {
+  color: var(--orange);
+}
+
+
+/* =========================================================
+   05. LANDING PAGE
+========================================================= */
+
+.landing {
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      ellipse at 10% 70%,
+      #f0edff 0,
+      transparent 36%
+    ),
+    #fbfaff;
+}
+
+/* Landing Navbar */
+
+.topbar {
+  height: 82px;
+  padding: 0 max(6.5vw, 26px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(98, 75, 186, 0.08);
+}
+
+.online {
+  color: #66647b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.online i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: #51c690;
+  box-shadow: 0 0 0 4px #51c69022;
+}
+
+/* Hero Section */
+
+.hero {
+  position: relative;
+  max-width: 1240px;
+  min-height: 660px;
+  margin: auto;
+  padding: 76px 36px 80px;
+  display: grid;
+  align-items: center;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 78px;
+}
+
+.hero-copy {
+  position: relative;
+  padding-bottom: 35px;
+}
+
+.hero h1 {
+  margin: 16px 0 18px;
+  font: 800 clamp(52px, 6vw, 78px) / 0.99 "Outfit", sans-serif;
+  letter-spacing: -3.2px;
+}
+
+.hero h1 span {
+  color: var(--purple);
+}
+
+.hero-copy > p {
+  max-width: 460px;
+  margin-bottom: 25px;
+  color: #737187;
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+/* Feature Pills */
+
+.feature-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.feature-pills span {
+  padding: 9px 12px;
+  color: #5e5b72;
+  background: #fff;
+  border: 1px solid #eeebf7;
+  border-radius: 50px;
+  box-shadow: 0 4px 12px #29204408;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Decorative Doodle Art */
+
+.doodle-art {
+  position: relative;
+  height: 155px;
+  margin-top: 27px;
+  color: #f6a244;
+}
+
+.doodle-art span {
+  position: absolute;
+  animation: bob 3.2s ease-in-out infinite;
+}
+
+.doodle-art span:nth-child(1) {
+  left: 10%;
+  top: 5px;
+  font-size: 37px;
+}
+
+.doodle-art span:nth-child(2) {
+  left: 27%;
+  top: 32px;
+  font-size: 66px;
+  animation-delay: 0.4s;
+}
+
+.doodle-art span:nth-child(3) {
+  left: 49%;
+  top: 5px;
+  color: #7658dc;
+  font-size: 25px;
+  animation-delay: 0.8s;
+}
+
+.doodle-art span:nth-child(4) {
+  left: 62%;
+  top: 39px;
+  color: #ed6e5a;
+  font-size: 66px;
+  transform: rotate(-20deg);
+}
+
+.doodle-art span:nth-child(5) {
+  left: 82%;
+  top: 8px;
+  color: #e85f9f;
+  font-size: 45px;
+  animation-delay: 1.3s;
+}
+
+/* Start Card */
+
+.start-card {
+  position: relative;
+  padding: 37px 38px 26px;
+  border: 1px solid #eeebf7;
+  border-radius: var(--radius-2xl);
+  background: #fff;
+  box-shadow: var(--card-shadow);
+}
+
+.card-spark {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  color: var(--orange);
+  font-size: 28px;
+}
+
+.start-card h2 {
+  margin: 0 0 7px;
+  font: 700 25px "Outfit", sans-serif;
+  letter-spacing: -0.5px;
+}
+
+.start-card > p {
+  margin-bottom: 26px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Landing Forms */
+
+.start-card label,
+.lobby-side label {
+  display: block;
+  margin: 18px 0 8px;
+  color: #77748d;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+.start-card input,
+.lobby-side select,
+.guess-form input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  outline: none;
+  color: var(--ink);
+  border: 1px solid #e8e6ef;
+  border-radius: var(--radius-md);
+  background: #fff;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.start-card input:focus,
+.lobby-side select:focus,
+.guess-form input:focus {
+  border-color: #9c8ae8;
+  box-shadow: 0 0 0 3px #7257d91a;
+}
+
+.start-card input::placeholder,
+.guess-form input::placeholder {
+  color: #aaa8b8;
+}
+
+/* Start Button */
+
+.start-card .primary {
+  height: 49px;
+  margin-top: 12px;
+}
+
+.start-card .primary span {
+  float: right;
+  font-size: 19px;
+  line-height: 16px;
+}
+
+/* Join Room */
+
+.divider {
+  position: relative;
+  margin: 25px 0 19px;
+  color: #a4a1b3;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.divider::before {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #f0eef5;
+  content: "";
+}
+
+.divider span {
+  position: relative;
+  padding: 0 12px;
+  background: white;
+}
+
+.join-row {
+  display: flex;
+  gap: 9px;
+}
+
+.join-row input {
+  min-width: 0;
+  height: 46px;
+  text-transform: uppercase;
+}
+
+.join-row .button {
+  padding: 0 23px;
+}
+
+.room-footnote {
+  margin-top: 22px;
+  color: #858297;
+  text-align: center;
+  font-size: 11px;
+}
+
+.room-footnote span {
+  margin-right: 5px;
+}
+
+/* Error Message */
+
+.error {
+  margin-top: 12px;
+  color: #d34b4b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* Landing Footer */
+
+.landing-footer {
+  padding: 5px 20px 25px;
+  color: #a4a1b3;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+}
+
+.landing-footer span {
+  margin-left: 7px;
+  color: var(--orange);
+}
+
+
+/* =========================================================
+   06. GAME APP SHELL & HEADER
+========================================================= */
+
+.app-shell {
+  min-height: 100vh;
+  background: #f7f6fb;
+}
+
+/* Game Navbar */
+
+.game-topbar {
+  height: 68px;
+  padding: 0 4.5vw;
+  background: white;
+  border-bottom: 1px solid var(--line);
+}
+
+.game-topbar .brand {
+  font-size: 21px;
+}
+
+.room-badge {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  color: #77748d;
+  background: #f5f3fc;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.room-badge strong {
+  margin-left: 6px;
+  color: var(--purple);
+  font-size: 13px;
+  letter-spacing: 2px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.small-button {
+  padding: 9px 13px;
+  color: #5d5971;
+  background: #f5f4f9;
+  font-size: 11px;
+}
+
+.leave-button {
+  color: #ca5858;
+  background: #fff0ef;
+}
+
+/* Connection Status */
+
+.connection-bar {
+  padding: 8px 4.5vw;
+  color: #88859a;
+  background: white;
+  border-bottom: 1px solid var(--line);
+  font-size: 10px;
+}
+
+/* App Error */
+
+.app-error {
+  position: fixed;
+  z-index: 8;
+  top: 90px;
+  left: 50%;
+  max-width: min(460px, 90vw);
+  padding: 12px 40px 12px 16px;
+  border: 1px solid #ffd1d1;
+  border-radius: var(--radius-md);
+  background: #fff6f6;
+  box-shadow: var(--card-shadow);
+  transform: translateX(-50%);
+}
+
+.app-error button {
+  position: absolute;
+  top: 7px;
+  right: 10px;
+  border: 0;
+  color: #a55;
+  background: none;
+  font-size: 20px;
+}
+
+/* Toast Notification */
+
+.toast {
+  position: fixed;
+  z-index: 9;
+  top: 88px;
+  left: 50%;
+  padding: 12px 18px;
+  color: white;
+  border-radius: 50px;
+  background: #28243e;
+  box-shadow: var(--card-shadow);
+  font-size: 13px;
+  font-weight: 700;
+  animation: slide-down 0.25s ease both;
+  transform: translateX(-50%);
+}
+
+
+/* =========================================================
+   07. LOBBY LAYOUT
+========================================================= */
+
+.lobby-layout,
+.game-layout {
+  display: grid;
+  max-width: 1320px;
+  margin: auto;
+  padding: 32px 32px 50px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+}
+
+/* Lobby Heading */
+
+.lobby-title {
+  margin: 2px 0 25px;
+}
+
+.lobby-title h1 {
+  margin: 8px 0 5px;
+  font: 700 34px "Outfit", sans-serif;
+  letter-spacing: -1px;
+}
+
+.lobby-title p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Players Grid */
+
+.players-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.player-card,
+.empty-seat {
+  min-height: 79px;
+  padding: 13px 15px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #efedf4;
+  border-radius: var(--radius-lg);
+  background: white;
+  box-shadow: 0 4px 13px #28204405;
+}
+
+.host-card {
+  border-color: #dcd5fa;
+}
+
+/* Player Avatar */
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 13px;
+  background: #f4efff;
+  font-size: 24px;
+}
+
+.avatar-1 {
+  background: #fff3e7;
+}
+
+.avatar-2 {
+  background: #eaf8f1;
+}
+
+.avatar-3 {
+  background: #eaf5ff;
+}
+
+.avatar-4 {
+  background: #fff0f3;
+}
+
+.avatar-5 {
+  background: #fff7db;
+}
+
+/* Player Information */
+
+.player-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.player-info strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-info span {
+  color: #918ea2;
+  font-size: 10px;
+}
+
+/* Ready Status */
+
+.ready-check {
+  width: 21px;
+  height: 21px;
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  color: #26855a;
+  border-radius: 50%;
+  background: #e8f8ef;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ready-toggle {
+  margin-left: auto;
+  padding: 7px 9px;
+  color: var(--purple);
+  border: 0;
+  border-radius: 7px;
+  background: #f2efff;
+  white-space: nowrap;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.ready-on {
+  color: #26855a;
+  background: #e8f8ef;
+}
+
+/* Empty Player Seat */
+
+.empty-seat {
+  justify-content: center;
+  flex-direction: column;
+  border-style: dashed;
+  color: #aaa7b7;
+  background: transparent;
+  box-shadow: none;
+}
+
+.empty-seat span {
+  font-size: 19px;
+}
+
+.empty-seat small {
+  font-size: 10px;
+}
+
+/* Invite Panel */
+
+.invite-panel {
+  margin-top: 19px;
+  padding: 17px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #ebe8f6;
+  border-radius: var(--radius-lg);
+  background: #f5f2ff;
+}
+
+.invite-icon {
+  width: 39px;
+  height: 39px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 11px;
+  background: white;
+}
+
+.invite-panel > div:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.invite-panel strong {
+  font-size: 11px;
+}
+
+.invite-panel span {
+  color: #89869b;
+  font-size: 10px;
+}
+
+.invite-panel .button {
+  padding: 10px 12px;
+  flex: 0 0 auto;
+  font-size: 10px;
+}
+
+
+/* =========================================================
+   08. LOBBY SIDEBAR & SETTINGS
+========================================================= */
+
+.lobby-side,
+.scoreboard,
+.chat-panel {
+  padding: 22px;
+  border: 1px solid #eeedf4;
+  border-radius: var(--radius-xl);
+  background: white;
+  box-shadow: 0 5px 18px #28204406;
+}
+
+.side-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.side-heading h2 {
+  margin: 5px 0 0;
+  font: 700 18px "Outfit", sans-serif;
+  letter-spacing: -0.3px;
+}
+
+.settings-icon {
+  font-size: 20px;
+}
+
+.lobby-side form {
+  margin-top: 16px;
+}
+
+.lobby-side select {
+  height: 43px;
+  color: #56536b;
+  font-size: 12px;
+}
+
+/* Settings Button */
+
+.text-button {
+  margin-top: 12px;
+  padding: 0;
+  color: var(--purple);
+  background: transparent;
+  font-size: 11px;
+}
+
+/* Readonly Settings */
+
+.settings-readonly {
+  margin-top: 19px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: #f8f7fb;
+}
+
+.settings-readonly p {
+  margin: 7px 0;
+  font-size: 12px;
+}
+
+.settings-readonly span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+/* Lobby Tip */
+
+.lobby-tip {
+  margin: 22px 0;
+  padding: 13px;
+  display: flex;
+  gap: 10px;
+  border-radius: var(--radius-md);
+  background: #fff8e9;
+}
+
+.lobby-tip > span {
+  font-size: 18px;
+}
+
+.lobby-tip p {
+  margin: 0;
+  color: #777084;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.lobby-tip strong {
+  color: var(--ink);
+}
+
+/* Start Game */
+
+.start-button {
+  height: 46px;
+  font-size: 12px;
+}
+
+.start-hint {
+  display: block;
+  margin-top: 10px;
+  color: #9996a8;
+  text-align: center;
+  font-size: 10px;
+}
+
+
+/* =========================================================
+   09. GAME MAIN LAYOUT
+========================================================= */
+
+.game-layout {
+  grid-template-columns: minmax(0, 1fr) 310px;
+  padding-top: 24px;
+}
+
+.game-main {
+  min-width: 0;
+}
+
+/* Game Status Header */
+
+.game-status {
+  min-height: 72px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border: 1px solid #eeedf4;
+  border-radius: 13px 13px 0 0;
+  background: white;
+}
+
+/* Turn Information */
+
+.turn-info {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.round-label {
+  color: var(--purple);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.round-label span {
+  color: #a09daf;
+}
+
+.turn-info > strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Timer */
+
+.timer {
+  padding: 9px 11px;
+  color: #5c576f;
+  border-radius: 9px;
+  background: #f6f4fb;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.timer-low {
+  color: #d84c4c;
+  background: #fff0ee;
+  animation: pulse 1s infinite;
+}
+
+/* Word Display */
+
+.word-chip {
+  max-width: 200px;
+  padding: 8px 11px;
+  overflow: hidden;
+  color: #77748b;
+  border-radius: 8px;
+  background: #fff7e8;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}
+
+.word-chip strong {
+  color: #4a455b;
+}
+
+/* Word Selection */
+
+.word-picker {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  margin-top: 92px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #ebe8f6;
+  border-radius: 12px;
+  background: white;
+  box-shadow: var(--card-shadow);
+  transform: translateX(-50%);
+}
+
+.word-picker > span {
+  padding: 0 5px;
+  color: #77748b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.word-picker button {
+  padding: 9px 12px;
+  color: var(--purple);
+  border: 0;
+  border-radius: 8px;
+  background: #f3f0ff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.word-picker button:hover {
+  background: #e8e2ff;
+}
+
+
+/* =========================================================
+   10. DRAWING CANVAS
+========================================================= */
+
+.canvas-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.68;
+  overflow: hidden;
+  border: 1px solid #eeedf4;
+  border-top: 0;
+  border-radius: 0 0 13px 13px;
+  background: white;
+}
+
+.canvas-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.canvas-disabled canvas {
+  cursor: default;
+}
+
+/* Canvas Toolbar */
+
+.canvas-toolbar {
+  position: absolute;
+  right: 12px;
+  bottom: 11px;
+  left: 12px;
+  min-height: 45px;
+  padding: 6px 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid #eceaf1;
+  border-radius: var(--radius-md);
+  background: #ffffffed;
+  box-shadow: 0 3px 12px #2920440d;
+}
+
+/* Color Palette */
+
+.palette,
+.brush-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-dot {
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  border: 1px solid #00000014;
+  border-radius: 50%;
+}
+
+.color-dot.selected {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+/* Drawing Tools */
+
+.brush-tools {
+  gap: 6px;
+}
+
+.tool-button {
+  width: 29px;
+  height: 29px;
+  color: #77748b;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 17px;
+}
+
+.tool-button:hover,
+.tool-active {
+  color: var(--purple);
+  background: #f0ecff;
+}
+
+.brush-tools input {
+  width: 69px;
+  accent-color: var(--purple);
+}
+
+
+/* =========================================================
+   11. GAME SIDEBAR
+========================================================= */
+
+.game-sidebar {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+
+/* =========================================================
+   12. SCOREBOARD
+========================================================= */
+
+.scoreboard {
+  padding: 18px;
+}
+
+.scoreboard .side-heading h2 span {
+  color: #aaa7b7;
+  font: 500 11px "DM Sans", sans-serif;
+}
+
+.score-row {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-bottom: 1px solid #f3f2f6;
+  font-size: 11px;
+}
+
+.score-row:first-of-type {
+  margin-top: 13px;
+}
+
+.score-row:last-child {
+  border-bottom: 0;
+}
+
+.score-me .score-name {
+  color: var(--purple);
+  font-weight: 700;
+}
+
+.score-rank {
+  width: 20px;
+  color: #918ea2;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.score-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-row > strong {
+  color: #5f5b73;
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   13. CHAT PANEL
+========================================================= */
+
+.chat-panel {
+  min-height: 320px;
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Chat Header */
+
+.chat-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-heading h2 {
+  margin: 0;
+  font: 700 13px "Outfit", sans-serif;
+}
+
+.chat-heading > span {
+  color: #38a771;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+/* Chat Messages Container */
+
+.chat-messages {
+  min-height: 160px;
+  max-height: 345px;
+  margin: 13px -2px 10px;
+  padding: 0 3px;
+  overflow-y: auto;
+  flex: 1;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+  scrollbar-width: thin;
+  scrollbar-color: #dcd6f0 transparent;
+}
+
+/* Chat Note */
+
+.chat-note {
+  margin: 5px 0 11px;
+  padding: 9px;
+  color: #89869b;
+  border-radius: 8px;
+  background: #f8f7fb;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+/* Normal Messages */
+
+.chat-message {
+  margin: 7px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.chat-message strong {
+  color: #5d5971;
+}
+
+.chat-message span {
+  color: #858296;
+  overflow-wrap: anywhere;
+}
+
+/* Correct Guess Messages */
+
+.correct-message {
+  padding: 7px 8px;
+  border-radius: 7px;
+  background: #eaf8f0;
+}
+
+.correct-message strong,
+.correct-message span {
+  color: #26845a;
+}
+
+/* Chat / Guess Input */
+
+.guess-form {
+  display: flex;
+  gap: 6px;
+}
+
+.guess-form input {
+  height: 40px;
+  min-width: 0;
+  padding: 0 10px;
+  font-size: 10px;
+}
+
+.guess-form button {
+  width: 40px;
+  flex: 0 0 auto;
+  color: white;
+  border: 0;
+  border-radius: 8px;
+  background: var(--purple);
+}
+
+.guess-form button:disabled {
+  background: #c9c4da;
+}
+
+
+/* =========================================================
+   14. GAME OVER & ROUND END
+========================================================= */
+
+.game-over-card {
+  margin-top: 13px;
+  padding: 20px;
+  text-align: center;
+  border: 1px solid #e7e1fb;
+  border-radius: 13px;
+  background: #f4f0ff;
+}
+
+.game-over-card h2 {
+  margin: 9px 0 5px;
+  font: 700 20px "Outfit", sans-serif;
+}
+
+.game-over-card p {
+  margin-bottom: 13px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.game-over-card button {
+  padding: 11px 17px;
+  font-size: 11px;
+}
+
+.game-over-card .lobby-return-button {
+  margin-left: 8px;
+  color: #625e75;
+  border: 1px solid #e6e2f0;
+  background: white;
+}
+
+/* Round End Banner */
+
+.round-end-banner {
+  padding: 13px;
+  color: #666177;
+  border: 1px solid #f1e4c5;
+  border-radius: 9px;
+  background: #fff8e9;
+  text-align: center;
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   15. RESPONSIVE DESIGN
+========================================================= */
+
+
+/* ---------------------------------------------------------
+   15.1 Compact Desktop (1100px)
+--------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  .hero {
+    gap: 38px;
+    padding-left: 25px;
+    padding-right: 25px;
+  }
+
+  .lobby-layout,
+  .game-layout {
+    padding-left: 20px;
+    padding-right: 20px;
+    gap: 17px;
+  }
+
+  .game-layout {
+    grid-template-columns: minmax(0, 1fr) 285px;
+  }
+
+  .lobby-layout {
+    grid-template-columns: minmax(0, 1fr) 285px;
+  }
+
+  .chat-panel,
+  .game-sidebar {
+    min-width: 0;
+  }
+}
+
+
+/* ---------------------------------------------------------
+   15.2 Tablet (900px)
+--------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .hero {
+    gap: 34px;
+    padding-top: 55px;
+  }
+
+  .hero h1 {
+    font-size: 59px;
+  }
+
+  .lobby-layout,
+  .game-layout {
+    grid-template-columns: minmax(0, 1fr) 260px;
+    gap: 15px;
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .lobby-side {
+    padding: 18px;
+  }
+
+  .palette {
+    gap: 6px;
+  }
+
+  .color-dot {
+    width: 16px;
+    height: 16px;
+  }
+
+  .canvas-toolbar {
+    gap: 7px;
+  }
+}
+
+
+/* ---------------------------------------------------------
+   15.3 Mobile (700px)
+--------------------------------------------------------- */
+
+@media (max-width: 700px) {
+
+  /* Landing Navbar */
+
+  .topbar {
+    height: 67px;
+    padding: 0 18px;
+  }
+
+  .brand {
+    font-size: 21px;
+  }
+
+  /* Hero */
+
+  .hero {
+    min-height: auto;
+    padding: 45px 20px 38px;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .hero-copy {
+    padding-bottom: 0;
+  }
+
+  .hero h1 {
+    font-size: clamp(53px, 14vw, 70px);
+  }
+
+  .hero-copy > p {
+    max-width: 500px;
+    font-size: 14px;
+  }
+
+  .doodle-art {
+    height: 95px;
+    margin-top: 14px;
+  }
+
+  .doodle-art span:nth-child(2) {
+    top: 18px;
+  }
+
+  .doodle-art span:nth-child(4) {
+    top: 20px;
+  }
+
+  /* Start Card */
+
+  .start-card {
+    padding: 27px 24px 23px;
+  }
+
+  .landing-footer {
+    padding-bottom: 17px;
+  }
+
+  /* Game Header */
+
+  .game-topbar {
+    padding: 0 12px;
+  }
+
+  .game-topbar .brand {
+    font-size: 18px;
+  }
+
+  .small-button {
+    padding: 8px 10px;
+    font-size: 10px;
+  }
+
+  .small-button span {
+    display: none;
+  }
+
+  .connection-bar {
+    padding: 7px 13px;
+  }
+
+  /* Lobby Layout */
+
+  .lobby-layout,
+  .game-layout {
+    padding: 20px 13px 35px;
+    grid-template-columns: 1fr;
+  }
+
+  .lobby-title {
+    margin-bottom: 17px;
+  }
+
+  .lobby-title h1 {
+    font-size: 29px;
+  }
+
+  .players-grid {
+    gap: 8px;
+  }
+
+  .player-card,
+  .empty-seat {
+    min-height: 68px;
+    padding: 9px;
+    gap: 8px;
+  }
+
+  .avatar {
+    width: 37px;
+    height: 37px;
+    font-size: 21px;
+  }
+
+  .player-info strong {
+    font-size: 10px;
+  }
+
+  .player-info span {
+    font-size: 9px;
+  }
+
+  /* Invite Panel */
+
+  .invite-panel {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .invite-panel .button {
+    max-width: 98px;
+    white-space: normal;
+    font-size: 9px;
+  }
+
+  .invite-panel span {
+    line-height: 1.35;
+  }
+
+  .lobby-side {
+    padding: 18px;
+  }
+
+  /* Game Layout */
+
+  .game-layout {
+    gap: 13px;
+  }
+
+  .game-main,
+  .game-sidebar {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .game-status {
+    min-height: 65px;
+    padding: 9px;
+    gap: 7px;
+  }
+
+  .turn-info > strong {
+    max-width: 170px;
+    font-size: 10px;
+  }
+
+  .timer {
+    padding: 8px;
+    font-size: 10px;
+  }
+
+  .word-chip {
+    max-width: 128px;
+    padding: 7px;
+    font-size: 9px;
+  }
+
+  /* Canvas */
+
+  .canvas-wrap {
+    aspect-ratio: 1.16;
+  }
+
+  .canvas-toolbar {
+    right: 7px;
+    bottom: 7px;
+    left: 7px;
+    min-height: 40px;
+    padding: 5px;
+    gap: 4px;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+
+  .palette {
+    gap: 5px;
+    flex-shrink: 0;
+  }
+
+  .color-dot {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+  }
+
+  .brush-tools {
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  .tool-button {
+    width: 25px;
+    height: 27px;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .brush-tools input {
+    width: 42px;
+  }
+
+  /* Word Picker */
+
+  .word-picker {
+    position: relative;
+    left: auto;
+    margin: 8px 0;
+    padding: 9px;
+    justify-content: center;
+    flex-wrap: wrap;
+    transform: none;
+  }
+
+  .word-picker > span {
+    width: 100%;
+    text-align: center;
+  }
+
+  .word-picker button {
+    padding: 8px;
+    font-size: 10px;
+  }
+
+  /* Game Sidebar */
+
+  .game-sidebar {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Scoreboard */
+
+  .scoreboard {
+    padding: 14px;
+  }
+
+  .score-row {
+    min-height: 34px;
+  }
+
+  /* Chat */
+
+  .chat-panel {
+    width: 100%;
+    min-height: 280px;
+    padding: 16px;
+  }
+
+  .chat-messages {
+    min-height: 140px;
+    max-height: 250px;
+  }
+
+  .chat-message {
+    font-size: 11px;
+  }
+
+  .guess-form {
+    width: 100%;
+  }
+
+  .guess-form input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+
+/* ---------------------------------------------------------
+   15.4 Small Mobile (480px)
+--------------------------------------------------------- */
+
+@media (max-width: 480px) {
+
+  .topbar {
+    padding: 0 14px;
+  }
+
+  .game-topbar {
+    padding: 0 10px;
+  }
+
+  .header-actions {
+    gap: 5px;
+  }
+
+  .small-button {
+    padding: 8px;
+  }
+
+  .room-badge {
+    padding: 6px 8px;
+    font-size: 8px;
+  }
+
+  .lobby-layout,
+  .game-layout {
+    padding: 16px 10px 28px;
+  }
+
+  .players-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .player-card {
+    min-height: 65px;
+  }
+
+  .invite-panel {
+    flex-wrap: wrap;
+  }
+
+  .game-status {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .canvas-wrap {
+    aspect-ratio: 1;
+  }
+
+  .chat-panel {
+    padding: 13px;
+  }
+
+  .chat-message {
+    font-size: 11px;
+    overflow-wrap: anywhere;
+  }
+
+  .guess-form input {
+    font-size: 12px;
+  }
+
+  .guess-form button {
+    min-width: 40px;
+  }
+
+  .game-over-card {
+    padding: 15px;
+  }
+}
+
+
+/* ---------------------------------------------------------
+   15.5 Extra Small Mobile (380px)
+--------------------------------------------------------- */
+
+@media (max-width: 380px) {
+
+  .game-topbar .brand {
+    font-size: 16px;
+  }
+
+  .room-badge {
+    padding: 7px;
+  }
+
+  .room-badge strong {
+    font-size: 11px;
+  }
+
+  .leave-button {
+    padding: 8px;
+  }
+
+  .game-status {
+    flex-wrap: wrap;
+  }
+
+  .word-chip {
+    display: none;
+  }
+
+  .palette {
+    gap: 4px;
+  }
+
+  .color-dot {
+    width: 13px;
+    height: 13px;
+  }
+
+  .brush-tools input {
+    width: 32px;
+  }
+
+  .invite-panel .invite-icon {
+    display: none;
+  }
+
+  .chat-panel {
+    min-height: 270px;
+  }
+
+  .game-over-card .lobby-return-button {
+    margin: 8px 0 0;
+  }
+}
+
+
+/* ---------------------------------------------------------
+   15.6 Landscape Mobile
+--------------------------------------------------------- */
+
+@media (max-width: 900px) and (orientation: landscape) {
+
+  .hero {
+    min-height: auto;
+  }
+
+  .canvas-wrap {
+    aspect-ratio: 1.6;
+  }
+}
+
+
+/* =========================================================
+   16. TOUCH DEVICE IMPROVEMENTS
+========================================================= */
+
+@media (hover: none) {
+
+  .button:not(:disabled):hover {
+    transform: none;
+  }
+
+  .tool-button,
+  .color-dot,
+  .ready-toggle {
+    touch-action: manipulation;
+  }
+}
+
+
+/* =========================================================
+   17. ACCESSIBILITY & REDUCED MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
