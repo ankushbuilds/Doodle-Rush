@@ -12,10 +12,6 @@ import { attachRoomHandlers } from "./game/roomManager.js";
 const app = express();
 const server = http.createServer(app);
 
-// =====================================
-// SERVER CONFIGURATION
-// =====================================
-
 const PORT = Number(process.env.PORT) || 3001;
 
 // =====================================
@@ -26,16 +22,41 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   process.env.CLIENT_ORIGIN,
+  process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : null,
 ].filter(Boolean);
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+
+  // Exact configured origins
+  if (allowedOrigins.includes(origin)) return true;
+
+  // Allow official Vercel deployment and preview subdomains
+  try {
+    const url = new URL(origin);
+
+    if (
+      url.protocol === "https:" &&
+      url.hostname.endsWith(".vercel.app")
+    ) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
+};
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests without an Origin header (e.g. health checks)
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (isAllowedOrigin(origin)) {
       return callback(null, true);
     }
 
-    console.warn(`Blocked CORS request from: ${origin}`);
+    console.warn("Blocked CORS request from:", origin);
     return callback(new Error("Not allowed by CORS"));
   },
   methods: ["GET", "POST"],
@@ -65,7 +86,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 // =====================================
-// GAME HISTORY API
+// GAME HISTORY
 // =====================================
 
 app.get("/api/history", async (_req, res, next) => {
@@ -106,12 +127,21 @@ app.use((error, _req, res, _next) => {
 });
 
 // =====================================
-// SOCKET.IO CONFIGURATION
+// SOCKET.IO
 // =====================================
 
 const io = new Server(server, {
   cors: corsOptions,
   maxHttpBufferSize: 1e6,
+  transports: ["polling", "websocket"],
+});
+
+io.engine.on("connection_error", (error) => {
+  console.error("Socket.IO connection error:", {
+    code: error.code,
+    message: error.message,
+    context: error.context,
+  });
 });
 
 // =====================================
@@ -138,10 +168,11 @@ attachRoomHandlers(io, async (game) => {
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`DoodleRush server running on port ${PORT}`);
+  console.log("Allowed frontend origins:", allowedOrigins);
 });
 
 // =====================================
-// MONGODB CONNECTION
+// MONGODB
 // =====================================
 
 if (process.env.MONGO_URI) {
@@ -154,7 +185,5 @@ if (process.env.MONGO_URI) {
       console.error("MongoDB connection failed:", error.message);
     });
 } else {
-  console.warn(
-    "MONGO_URI is missing. Game history will not be available."
-  );
+  console.warn("MONGO_URI is missing from environment variables.");
 }
