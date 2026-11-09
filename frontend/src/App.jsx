@@ -101,11 +101,13 @@ export default function App() {
   // Socket reference
   const socketRef = useRef(null);
   const roomRef = useRef(null);
+  const privateWordRef = useRef(null);
   const soundSettingsRef = useRef(null);
 
   // Application state
   const [connected, setConnected] = useState(false);
   const [room, setRoom] = useState(null);
+  const [privateWord, setPrivateWord] = useState(null);
   const [soundSettings, setSoundSettings] = useState(readSoundSettings);
   const [session, setSession] = useState(readSession);
 
@@ -167,6 +169,8 @@ export default function App() {
 
             setSession(null);
             roomRef.current = null;
+            privateWordRef.current = null;
+            setPrivateWord(null);
             setRoom(null);
           }
         });
@@ -189,8 +193,48 @@ export default function App() {
 
     // Room state update
     const handleRoomState = (newRoom) => {
+      const currentWord = privateWordRef.current;
+      const currentTurnKey =
+        newRoom.phase === "drawing" && newRoom.yourTurn
+          ? `${newRoom.drawerId}:${newRoom.round}`
+          : null;
+
+      if (
+        !currentTurnKey ||
+        !currentWord ||
+        currentWord.turnKey !== currentTurnKey
+      ) {
+        privateWordRef.current = null;
+        setPrivateWord(null);
+      }
+
       roomRef.current = newRoom;
       setRoom(newRoom);
+    };
+
+    const handlePrivateWord = ({ drawerId, round, word }) => {
+      const currentRoom = roomRef.current;
+
+      if (
+        !currentRoom?.yourTurn ||
+        currentRoom.phase !== "drawing" ||
+        currentRoom.drawerId !== drawerId ||
+        currentRoom.round !== round ||
+        typeof word !== "string" ||
+        !word
+      ) {
+        return;
+      }
+
+      const nextWord = {
+        drawerId,
+        round,
+        turnKey: `${drawerId}:${round}`,
+        word,
+      };
+
+      privateWordRef.current = nextWord;
+      setPrivateWord(nextWord);
     };
 
     // Drawing events
@@ -248,8 +292,8 @@ export default function App() {
       setNotice(`${name} guessed it! +${points} points`);
     };
 
-    const handleRoundEnded = ({ word }) => {
-      setNotice(`The word was ${word}`);
+    const handleRoundEnded = () => {
+      setNotice("Round ended");
     };
 
     const handleRoundStarted = () => {
@@ -267,6 +311,34 @@ export default function App() {
       vibrate(250);
     };
 
+    const handleGameEnded = ({ reason }) => {
+      privateWordRef.current = null;
+      setPrivateWord(null);
+      setNotice("Game ended because not enough players remained.");
+      const returnToLobby = (current) =>
+        current
+          ? {
+              ...current,
+              phase: "lobby",
+              round: 0,
+              drawerId: null,
+              endsAt: null,
+              wordChoices: undefined,
+              maskedWord: "",
+              hint: "",
+              guessedIds: [],
+              strokes: [],
+            }
+          : null;
+
+      roomRef.current = returnToLobby(roomRef.current);
+      setRoom(returnToLobby);
+
+      if (reason !== "Not enough players to continue") {
+        console.warn("Game ended:", reason);
+      }
+    };
+
     // Server errors
     const handleAppError = ({ error: message }) => {
       setError(message);
@@ -278,6 +350,7 @@ export default function App() {
     socket.on("connect_error", handleConnectError);
 
     socket.on("room:state", handleRoomState);
+    socket.on("game:private-word", handlePrivateWord);
 
     socket.on("draw:stroke", handleDrawStroke);
     socket.on("draw:undo", handleDrawUndo);
@@ -290,6 +363,7 @@ export default function App() {
     socket.on("round:ended", handleRoundEnded);
     socket.on("player:joined", handlePlayerJoined);
     socket.on("game:over", handleGameOver);
+    socket.on("game:ended", handleGameEnded);
 
     socket.on("app:error", handleAppError);
 
@@ -312,6 +386,7 @@ export default function App() {
       socket.off("connect_error", handleConnectError);
 
       socket.off("room:state", handleRoomState);
+      socket.off("game:private-word", handlePrivateWord);
 
       socket.off("draw:stroke", handleDrawStroke);
       socket.off("draw:undo", handleDrawUndo);
@@ -324,6 +399,7 @@ export default function App() {
       socket.off("round:ended", handleRoundEnded);
       socket.off("player:joined", handlePlayerJoined);
       socket.off("game:over", handleGameOver);
+      socket.off("game:ended", handleGameEnded);
 
       socket.off("app:error", handleAppError);
 
@@ -453,6 +529,8 @@ export default function App() {
 
     setSession(null);
     roomRef.current = null;
+    privateWordRef.current = null;
+    setPrivateWord(null);
     setRoom(null);
     setMessages([]);
     setError("");
@@ -679,6 +757,7 @@ export default function App() {
             setSoundSettings((current) => ({ ...current, volume }))
           }
           onPlaySound={playSound}
+          privateWord={privateWord}
         />
       )}
     </main>

@@ -20,6 +20,7 @@ export default function Game({
   onSoundEnabledChange,
   onVolumeChange,
   onPlaySound,
+  privateWord,
 }) {
   // -------------------- STATE --------------------
 
@@ -46,7 +47,15 @@ export default function Game({
 
   const winner = sortedPlayers[0];
 
+  const enoughConnectedPlayers =
+    room.players.filter((player) => player.connected).length >= 2;
+
   const hasGuessed = room.guessedIds?.includes(room.playerId);
+  const ownWord =
+    privateWord?.drawerId === room.drawerId &&
+    privateWord.round === room.round
+      ? privateWord.word
+      : "";
 
   // -------------------- TIMER --------------------
 
@@ -174,13 +183,15 @@ export default function Game({
             </span>
 
             <strong>
-              {room.phase === "choosing"
+              {room.phase !== "gameOver" && !enoughConnectedPlayers
+                ? "Waiting for a player to reconnect..."
+                : room.phase === "choosing"
                 ? drawer
                   ? "Pick a word to draw"
                   : "Drawer is choosing a word..."
 
                 : room.phase === "roundEnd"
-                  ? `Round over — ${room.revealedWord}`
+                  ? "Round over"
 
                   : room.phase === "gameOver"
                     ? "Game complete!"
@@ -204,14 +215,20 @@ export default function Game({
           {/* Secret Word / Hint */}
 
           {drawer && room.phase === "drawing" && (
-            <div className="word-chip">
-              Your word: <strong>{room.word}</strong>
+            <div className="word-chip own-word-chip">
+              YOUR WORD:{" "}
+              <strong>
+                {ownWord
+                  ? [...ownWord].join(" ").toLocaleUpperCase()
+                  : "Loading..."}
+              </strong>
             </div>
           )}
 
           {!drawer && room.phase === "drawing" && (
             <div className="word-chip">
-              Word: <strong>{room.hint || "..."}</strong>
+              GUESS THE WORD:{" "}
+              <strong>{room.maskedWord || room.hint || "..."}</strong>
             </div>
           )}
 
@@ -241,7 +258,11 @@ export default function Game({
         <DrawingCanvas
           strokes={room.strokes || []}
           onAction={onAction}
-          disabled={!drawer || room.phase !== "drawing"}
+          disabled={
+            !drawer ||
+            room.phase !== "drawing" ||
+            !enoughConnectedPlayers
+          }
         />
 
         {/* ==================== GAME OVER ==================== */}
@@ -288,9 +309,7 @@ export default function Game({
 
         {room.phase === "roundEnd" && (
           <div className="round-end-banner">
-            The secret word was{" "}
-            <strong>{room.revealedWord}</strong>.
-            Next turn coming up!
+            Round complete. Next turn coming up!
           </div>
         )}
 
@@ -440,7 +459,8 @@ export default function Game({
               disabled={
                 drawer ||
                 hasGuessed ||
-                room.phase !== "drawing"
+                room.phase !== "drawing" ||
+                !enoughConnectedPlayers
               }
               maxLength={200}
             />
@@ -451,7 +471,8 @@ export default function Game({
                 !guess.trim() ||
                 drawer ||
                 hasGuessed ||
-                room.phase !== "drawing"
+                room.phase !== "drawing" ||
+                !enoughConnectedPlayers
               }
             >
               ➤

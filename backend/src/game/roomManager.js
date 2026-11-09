@@ -94,6 +94,19 @@ export function attachRoomHandlers(io, saveHistory) {
     room[key] = null;
   }
 
+  function clearGameTimers(room) {
+    clearTimer(room, "choiceTimer");
+    clearTimer(room, "turnTimer");
+    clearTimer(room, "pauseTimer");
+    resetHints(room);
+  }
+
+  function connectedPlayerCount(room) {
+    return [...room.players.values()].filter(
+      (player) => player.connected
+    ).length;
+  }
+
   // ==========================================================
   // ROOM STATE MANAGEMENT
   // ==========================================================
@@ -102,6 +115,13 @@ export function attachRoomHandlers(io, saveHistory) {
   function emitState(room) {
     for (const player of room.players.values()) {
       if (!player.connected || !player.socketId) continue;
+
+      const maskedWord =
+        room.phase === "drawing" &&
+        room.word &&
+        room.drawerId !== player.id
+          ? hintPattern(room.word, room.hintLetters)
+          : "";
 
       const state = {
         code: room.code,
@@ -131,28 +151,13 @@ export function attachRoomHandlers(io, saveHistory) {
           ? [...room.word].length
           : 0,
 
-        hint:
-          room.phase === "drawing" &&
-          room.word &&
-          room.drawerId !== player.id
-            ? hintPattern(room.word, room.hintLetters)
-            : "",
-
-        word:
-          room.drawerId === player.id
-            ? room.word
-            : undefined,
+        maskedWord,
+        hint: maskedWord,
 
         wordChoices:
           room.drawerId === player.id &&
           room.phase === "choosing"
             ? room.wordChoices
-            : undefined,
-
-        revealedWord:
-          room.phase === "roundEnd" ||
-          room.phase === "gameOver"
-            ? room.word
             : undefined,
       };
 
@@ -214,6 +219,25 @@ export function attachRoomHandlers(io, saveHistory) {
     io.to(room.code).emit(event, data);
   }
 
+  function emitPrivateWord(room) {
+    const drawer = room.players.get(room.drawerId);
+
+    if (
+      room.phase !== "drawing" ||
+      !room.word ||
+      !drawer?.connected ||
+      !drawer.socketId
+    ) {
+      return;
+    }
+
+    io.to(drawer.socketId).emit("game:private-word", {
+      drawerId: drawer.id,
+      round: room.round,
+      word: room.word,
+    });
+  }
+
   // Find current socket's player and room
   function findPlayer(socket, code = socket.data.roomCode) {
     const room = rooms.get(code);
@@ -263,8 +287,50 @@ export function attachRoomHandlers(io, saveHistory) {
   // GAME LIFECYCLE
   // ==========================================================
 
+  function scheduleWordChoice(room) {
+    clearTimer(room, "choiceTimer");
+
+    const gameGeneration = room.gameGeneration;
+    room.choiceTimer = setTimeout(() => {
+      if (
+        room.gameGeneration !== gameGeneration ||
+        room.phase !== "choosing" ||
+        !room.drawerId ||
+        !room.wordChoices.length
+      ) {
+        return;
+      }
+
+      if (connectedPlayerCount(room) < MIN_PLAYERS) {
+        room.waitingForPlayers = true;
+        return;
+      }
+
+      if (room.players.get(room.drawerId)?.connected) {
+        startDrawing(room, room.wordChoices[0]);
+      } else {
+        finishTurn(room);
+      }
+    }, 15_000);
+  }
+
   // Select the next drawer
   function chooseDrawer(room) {
+    if (
+      (room.phase !== "choosing" &&
+        room.phase !== "roundEnd") ||
+      room.players.size < MIN_PLAYERS
+    ) {
+      return;
+    }
+
+    if (connectedPlayerCount(room) < MIN_PLAYERS) {
+      room.waitingForPlayers = true;
+      return;
+    }
+
+    room.phase = "choosing";
+
     const active = room.drawerOrder.filter(
       (id) => room.players.get(id)?.connected
     );
@@ -314,24 +380,23 @@ export function attachRoomHandlers(io, saveHistory) {
 
     emitState(room);
 
-    // Automatically select the first word after 15 seconds
-    room.choiceTimer = setTimeout(() => {
-      if (
-        room.phase === "choosing" &&
-        room.drawerId &&
-        room.wordChoices.length
-      ) {
-        if (room.players.get(room.drawerId)?.connected) {
-          startDrawing(room, room.wordChoices[0]);
-        } else {
-          finishTurn(room);
-        }
-      }
-    }, 15_000);
+    scheduleWordChoice(room);
   }
 
   // Start the drawing phase
   function startDrawing(room, word) {
+    if (
+      room.phase !== "choosing" ||
+      room.players.size < MIN_PLAYERS ||
+      connectedPlayerCount(room) < MIN_PLAYERS ||
+      !room.drawerId ||
+      !room.players.get(room.drawerId)?.connected ||
+      typeof word !== "string" ||
+      !word
+    ) {
+      return finishTurn(room);
+    }
+
     clearTimer(room, "choiceTimer");
 
     room.word = word;
@@ -343,10 +408,12 @@ export function attachRoomHandlers(io, saveHistory) {
     room.endsAt =
       Date.now() + room.settings.roundDuration * 1000;
 
-    room.turnTimer = setTimeout(
-      () => finishTurn(room),
-      room.settings.roundDuration * 1000
-    );
+    const gameGeneration = room.gameGeneration;
+    room.turnTimer = setTimeout(() => {
+      if (room.gameGeneration === gameGeneration) {
+        finishTurn(room);
+      }
+    }, room.settings.roundDuration * 1000);
 
     broadcast(room, "round:started", {
       round: room.round,
@@ -354,10 +421,18 @@ export function attachRoomHandlers(io, saveHistory) {
     });
 
     emitState(room);
+    emitPrivateWord(room);
   }
 
   // Finish the current player's turn
   function finishTurn(room) {
+    if (
+      room.phase !== "choosing" &&
+      room.phase !== "drawing"
+    ) {
+      return;
+    }
+
     clearTimer(room, "choiceTimer");
     clearTimer(room, "turnTimer");
     clearTimer(room, "pauseTimer");
@@ -367,17 +442,22 @@ export function attachRoomHandlers(io, saveHistory) {
     room.endsAt = null;
 
     broadcast(room, "round:ended", {
-      word: room.word,
-
       scores: [...room.players.values()].map(publicPlayer),
     });
 
     emitState(room);
 
-    room.pauseTimer = setTimeout(
-      () => chooseDrawer(room),
-      ROUND_PAUSE_MS
-    );
+    const gameGeneration = room.gameGeneration;
+    room.pauseTimer = setTimeout(() => {
+      if (
+        room.gameGeneration !== gameGeneration ||
+        room.phase !== "roundEnd"
+      ) {
+        return;
+      }
+
+      chooseDrawer(room);
+    }, ROUND_PAUSE_MS);
   }
 
   // Finish the complete game
@@ -430,14 +510,15 @@ export function attachRoomHandlers(io, saveHistory) {
 
   // Start a new game
   function startGame(room) {
-    clearTimer(room, "choiceTimer");
-    resetHints(room);
+    clearGameTimers(room);
+    room.gameGeneration += 1;
 
     room.phase = "choosing";
     room.round = 1;
 
     room.drawerOrder = [...room.players.keys()];
     room.turnIndex = 0;
+    room.waitingForPlayers = false;
 
     for (const player of room.players.values()) {
       player.score = 0;
@@ -448,10 +529,8 @@ export function attachRoomHandlers(io, saveHistory) {
 
   // Return room to lobby after game completion
   function returnToLobby(room) {
-    clearTimer(room, "turnTimer");
-    clearTimer(room, "choiceTimer");
-    clearTimer(room, "pauseTimer");
-    resetHints(room);
+    clearGameTimers(room);
+    room.gameGeneration += 1;
 
     room.phase = "lobby";
     room.round = 0;
@@ -473,6 +552,41 @@ export function attachRoomHandlers(io, saveHistory) {
     emitState(room);
   }
 
+  function endGameForInsufficientPlayers(room) {
+    if (
+      room.phase !== "choosing" &&
+      room.phase !== "drawing" &&
+      room.phase !== "roundEnd"
+    ) {
+      return;
+    }
+
+    clearGameTimers(room);
+    room.gameGeneration += 1;
+    room.phase = "lobby";
+    room.round = 0;
+    room.drawerId = null;
+    room.drawerOrder = [];
+    room.turnIndex = 0;
+    room.waitingForPlayers = false;
+    room.word = "";
+    room.wordChoices = [];
+    room.strokes = [];
+    room.guessed.clear();
+    room.endsAt = null;
+
+    for (const member of room.players.values()) {
+      member.score = 0;
+      member.ready = member.id === room.hostId;
+    }
+
+    broadcast(room, "game:ended", {
+      reason: "Not enough players to continue",
+    });
+
+    emitState(room);
+  }
+
   // ==========================================================
   // PLAYER MANAGEMENT
   // ==========================================================
@@ -482,6 +596,8 @@ export function attachRoomHandlers(io, saveHistory) {
     const player = room.players.get(playerId);
 
     if (!player) return;
+
+    clearTimeout(player.reconnectTimer);
 
     // Remove socket from room
     if (player.socketId) {
@@ -513,6 +629,24 @@ export function attachRoomHandlers(io, saveHistory) {
       });
     }
 
+    if (!room.players.size) {
+      clearGameTimers(room);
+      room.gameGeneration += 1;
+      clearTimer(room, "emptyTimer");
+      rooms.delete(room.code);
+      return;
+    }
+
+    if (
+      room.players.size < MIN_PLAYERS &&
+      (room.phase === "choosing" ||
+        room.phase === "drawing" ||
+        room.phase === "roundEnd")
+    ) {
+      endGameForInsufficientPlayers(room);
+      return;
+    }
+
     // Handle drawer leaving
     if (
       room.phase === "choosing" &&
@@ -537,19 +671,6 @@ export function attachRoomHandlers(io, saveHistory) {
       ) {
         finishTurn(room);
       }
-    }
-
-    // Delete empty rooms
-    if (!room.players.size) {
-      clearTimer(room, "turnTimer");
-      clearTimer(room, "choiceTimer");
-      clearTimer(room, "pauseTimer");
-      resetHints(room);
-      clearTimer(room, "emptyTimer");
-
-      rooms.delete(room.code);
-
-      return;
     }
 
     emitState(room);
@@ -615,6 +736,8 @@ export function attachRoomHandlers(io, saveHistory) {
         wordChoices: [],
         hintLetters: new Set(),
         hintVersion: 0,
+        gameGeneration: 0,
+        waitingForPlayers: false,
 
         strokes: [],
         guessed: new Set(),
@@ -762,6 +885,7 @@ export function attachRoomHandlers(io, saveHistory) {
       }
 
       clearTimeout(player.reconnectTimer);
+      clearTimer(room, "emptyTimer");
 
       const roomWasEmpty = ![...room.players.values()].some(
         (member) => member.connected
@@ -787,7 +911,30 @@ export function attachRoomHandlers(io, saveHistory) {
         scheduleHint(room);
       }
 
+      if (
+        room.waitingForPlayers &&
+        connectedPlayerCount(room) >= MIN_PLAYERS
+      ) {
+        room.waitingForPlayers = false;
+
+        if (room.phase === "choosing") {
+          scheduleWordChoice(room);
+        } else if (room.phase === "roundEnd") {
+          clearTimer(room, "pauseTimer");
+          const gameGeneration = room.gameGeneration;
+          room.pauseTimer = setTimeout(() => {
+            if (
+              room.gameGeneration === gameGeneration &&
+              room.phase === "roundEnd"
+            ) {
+              chooseDrawer(room);
+            }
+          }, ROUND_PAUSE_MS);
+        }
+      }
+
       emitState(room);
+      emitPrivateWord(room);
 
       sendOk(callback, {
         code,
@@ -971,6 +1118,7 @@ export function attachRoomHandlers(io, saveHistory) {
 
         if (
           room.phase !== "choosing" ||
+          connectedPlayerCount(room) < MIN_PLAYERS ||
           room.drawerId !== player.id ||
           !room.wordChoices.includes(payload.word)
         ) {
@@ -998,6 +1146,7 @@ export function attachRoomHandlers(io, saveHistory) {
       if (
         !found ||
         found.room.phase !== "drawing" ||
+        connectedPlayerCount(found.room) < MIN_PLAYERS ||
         found.room.drawerId !== found.player.id
       ) {
         return;
@@ -1072,6 +1221,7 @@ export function attachRoomHandlers(io, saveHistory) {
         if (
           !found ||
           found.room.phase !== "drawing" ||
+          connectedPlayerCount(found.room) < MIN_PLAYERS ||
           found.room.drawerId !== found.player.id
         ) {
           return sendError(
@@ -1109,6 +1259,7 @@ export function attachRoomHandlers(io, saveHistory) {
         if (
           !found ||
           found.room.phase !== "drawing" ||
+          connectedPlayerCount(found.room) < MIN_PLAYERS ||
           found.room.drawerId !== found.player.id
         ) {
           return sendError(
@@ -1148,6 +1299,7 @@ export function attachRoomHandlers(io, saveHistory) {
       // Chat and guessing are available only during drawing
       if (
         room.phase !== "drawing" ||
+        connectedPlayerCount(room) < MIN_PLAYERS ||
         player.id === room.drawerId
       ) {
         return sendOk(callback);
@@ -1408,6 +1560,15 @@ export function attachRoomHandlers(io, saveHistory) {
         (candidate) => candidate.connected
       );
 
+      if (
+        connectedPlayerCount(room) < MIN_PLAYERS &&
+        (room.phase === "choosing" ||
+          room.phase === "drawing" ||
+          room.phase === "roundEnd")
+      ) {
+        room.waitingForPlayers = true;
+      }
+
       resetHints(room);
       if (hasConnectedPlayers && room.phase === "drawing") {
         scheduleHint(room);
@@ -1445,10 +1606,12 @@ export function attachRoomHandlers(io, saveHistory) {
           ].some((candidate) => candidate.connected);
 
           if (stillEmpty) {
-            clearTimer(room, "turnTimer");
-            clearTimer(room, "choiceTimer");
-            clearTimer(room, "pauseTimer");
-            resetHints(room);
+            clearGameTimers(room);
+            room.gameGeneration += 1;
+            clearTimer(room, "emptyTimer");
+            for (const member of room.players.values()) {
+              clearTimeout(member.reconnectTimer);
+            }
 
             rooms.delete(room.code);
           }

@@ -1023,6 +1023,14 @@ p {
   color: #4a455b;
 }
 
+.own-word-chip {
+  white-space: normal;
+}
+
+.own-word-chip strong {
+  overflow-wrap: anywhere;
+}
+
 /* Word Selection */
 
 .word-picker {
@@ -1909,7 +1917,8 @@ p {
   }
 
   .word-chip {
-    display: none;
+    display: block;
+    max-width: 100%;
   }
 
   .palette {

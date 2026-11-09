@@ -12,30 +12,62 @@ import { attachRoomHandlers } from "./game/roomManager.js";
 const app = express();
 const server = http.createServer(app);
 
-// Frontend origins
+// =====================================
+// SERVER CONFIGURATION
+// =====================================
+
+const PORT = Number(process.env.PORT) || 3001;
+
+// =====================================
+// CORS CONFIGURATION
+// =====================================
+
 const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   process.env.CLIENT_ORIGIN,
 ].filter(Boolean);
 
-// CORS configuration
-app.use(
-  cors({
-    origin: allowedOrigins,
-    methods: ["GET", "POST"],
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests without an Origin header (e.g. health checks)
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
 
-app.use(express.json());
+    console.warn(`Blocked CORS request from: ${origin}`);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  methods: ["GET", "POST"],
+  credentials: true,
+};
 
-// Health check
+// =====================================
+// EXPRESS MIDDLEWARE
+// =====================================
+
+app.use(cors(corsOptions));
+app.use(express.json({ limit: "1mb" }));
+
+// =====================================
+// HEALTH CHECK
+// =====================================
+
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok" });
+  res.status(200).json({
+    status: "ok",
+    message: "DoodleRush backend is running!",
+    database:
+      mongoose.connection.readyState === 1
+        ? "connected"
+        : "disconnected",
+  });
 });
 
-// Game history
+// =====================================
+// GAME HISTORY API
+// =====================================
+
 app.get("/api/history", async (_req, res, next) => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -49,53 +81,80 @@ app.get("/api/history", async (_req, res, next) => {
       .limit(20)
       .lean();
 
-    res.json(games);
+    return res.status(200).json(games);
   } catch (error) {
     next(error);
   }
 });
 
-// Error handler
-app.use((error, _req, res, _next) => {
-  console.error("HTTP request failed:", error);
+// =====================================
+// ERROR HANDLER
+// =====================================
 
-  res.status(500).json({
+app.use((error, _req, res, _next) => {
+  console.error("HTTP request failed:", error.message);
+
+  if (error.message === "Not allowed by CORS") {
+    return res.status(403).json({
+      error: "Origin not allowed by CORS.",
+    });
+  }
+
+  return res.status(500).json({
     error: "An unexpected server error occurred.",
   });
 });
 
-// Socket.IO configuration
+// =====================================
+// SOCKET.IO CONFIGURATION
+// =====================================
+
 const io = new Server(server, {
-  cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST"],
-    credentials: true,
-  },
+  cors: corsOptions,
   maxHttpBufferSize: 1e6,
 });
 
-// Attach game room handlers
-attachRoomHandlers(io, (game) => {
-  if (mongoose.connection.readyState !== 1) return;
+// =====================================
+// GAME ROOM HANDLERS
+// =====================================
 
-  return GameHistory.create(game);
+attachRoomHandlers(io, async (game) => {
+  if (mongoose.connection.readyState !== 1) {
+    console.warn("Game history not saved: MongoDB unavailable.");
+    return;
+  }
+
+  try {
+    await GameHistory.create(game);
+    console.log("Game history saved successfully.");
+  } catch (error) {
+    console.error("Failed to save game history:", error.message);
+  }
 });
 
-// Server configuration
-const port = Number(process.env.PORT) || 3001;
+// =====================================
+// SERVER START
+// =====================================
 
-server.listen(port, "0.0.0.0", () => {
-  console.log(`DoodleRush server running on port ${port}`);
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`DoodleRush server running on port ${PORT}`);
 });
 
-// MongoDB connection
+// =====================================
+// MONGODB CONNECTION
+// =====================================
+
 if (process.env.MONGO_URI) {
   mongoose
     .connect(process.env.MONGO_URI)
-    .then(() => console.log("Connected to MongoDB"))
+    .then(() => {
+      console.log("Connected to MongoDB successfully.");
+    })
     .catch((error) => {
       console.error("MongoDB connection failed:", error.message);
     });
 } else {
-  console.warn("MONGO_URI is missing from environment variables.");
+  console.warn(
+    "MONGO_URI is missing. Game history will not be available."
+  );
 }
